@@ -418,7 +418,7 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   #mobile-stats {
     display:flex !important;
     position:fixed; top:var(--hdr); left:0; right:0;
-    height:36px; z-index:999;
+    height:36px; z-index:1001;
     background:rgba(8,9,15,.95);
     border-bottom:1px solid var(--border);
     align-items:center; justify-content:space-around;
@@ -740,7 +740,7 @@ input[type=range].mc-slider::-moz-range-thumb {
 
 <!-- Sheet backdrop -->
 <div id="sheet-backdrop" onclick="toggleSheet()"
-  style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:499;"></div>
+  style="display:none;position:fixed;top:var(--hdr);left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:498;"></div>
 
 <!-- ═══ LAYOUT ═══ -->
 <div id="layout">
