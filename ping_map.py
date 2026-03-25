@@ -191,7 +191,7 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   border-bottom:1px solid var(--border);
   backdrop-filter:blur(20px);
   display:flex; align-items:center; padding:0 16px; gap:12px;
-  z-index:1000;
+  z-index:1001;
 }
 
 .brand {
@@ -740,7 +740,7 @@ input[type=range].mc-slider::-moz-range-thumb {
 
 <!-- Sheet backdrop -->
 <div id="sheet-backdrop" onclick="toggleSheet()"
-  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:499;backdrop-filter:blur(2px);"></div>
+  style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:499;"></div>
 
 <!-- ═══ LAYOUT ═══ -->
 <div id="layout">
