@@ -15,6 +15,10 @@ pingmap measures how long your data packets take to travel from your machine to 
 
 ---
 
+🌍 **Live Demo:** [https://pingmap.tjks.org](https://pingmap.tjks.org)
+
+---
+
 ## ✨ Features
 
 - **Real latency measurements** — TCP SYN/ACK timing (identical to ICMP ping, no `sudo` needed)
