@@ -367,7 +367,38 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
 #map-wrap { flex:1; position:relative; overflow:hidden; }
 #map { position:absolute; inset:0; }
 
-.leaflet-tile { filter:brightness(.45) saturate(.25) hue-rotate(200deg) contrast(1.1); }
+.leaflet-tile { filter:brightness(.75) saturate(.5) hue-rotate(195deg) contrast(1.05); transition:filter .3s; }
+
+/* ── MAP BRIGHTNESS SLIDER ── */
+#map-controls {
+  position:absolute; bottom:20px; right:16px; z-index:999;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:10px; padding:10px 14px;
+  display:flex; flex-direction:column; gap:6px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  min-width:170px;
+}
+.mc-label {
+  font-size:.58rem; text-transform:uppercase; letter-spacing:.1em;
+  color:var(--faint); display:flex; justify-content:space-between; align-items:center;
+}
+.mc-label span { color:var(--muted); font-family:'DM Mono',monospace; font-size:.65rem; }
+input[type=range].mc-slider {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:3px;
+  background:var(--border2); border-radius:2px; outline:none; cursor:pointer;
+}
+input[type=range].mc-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none;
+  width:14px; height:14px; border-radius:50%;
+  background:var(--c0); box-shadow:0 0 6px var(--c0); cursor:pointer;
+  transition:transform .15s;
+}
+input[type=range].mc-slider::-webkit-slider-thumb:hover { transform:scale(1.3); }
+input[type=range].mc-slider::-moz-range-thumb {
+  width:14px; height:14px; border-radius:50%; border:none;
+  background:var(--c0); cursor:pointer;
+}
 .leaflet-container:focus { outline:none; }
 .leaflet-control-zoom {
   border:1px solid var(--border2) !important;
@@ -679,6 +710,16 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   <div id="map-wrap">
     <div id="map"></div>
 
+    <!-- Map brightness controls -->
+    <div id="map-controls">
+      <div class="mc-label">🌍 Karte <span id="bright-val">75%</span></div>
+      <input type="range" class="mc-slider" id="bright-slider" min="20" max="100" value="75"
+        oninput="updateMapFilter(this.value)"/>
+      <div class="mc-label">🎨 Farbe <span id="sat-val">50%</span></div>
+      <input type="range" class="mc-slider" id="sat-slider" min="0" max="100" value="50"
+        oninput="updateMapFilter(null, this.value)"/>
+    </div>
+
     <div id="measuring-overlay">
       <div class="meas-card">
         <div class="meas-spinner"></div>
@@ -716,6 +757,22 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
 <div id="toast"></div>
 
 <script>
+/* ── MAP FILTER ── */
+let mapBright = 75, mapSat = 50;
+function updateMapFilter(bright, sat) {
+  if (bright !== null && bright !== undefined) mapBright = bright;
+  if (sat    !== null && sat    !== undefined) mapSat    = sat;
+  const style = document.createElement('style');
+  style.id = 'tile-filter-override';
+  const f = `brightness(${mapBright/100}) saturate(${mapSat/100}) hue-rotate(195deg) contrast(1.05)`;
+  style.textContent = `.leaflet-tile { filter:${f} !important; }`;
+  const existing = document.getElementById('tile-filter-override');
+  if (existing) existing.remove();
+  document.head.appendChild(style);
+  document.getElementById('bright-val').textContent = mapBright + '%';
+  document.getElementById('sat-val').textContent    = mapSat    + '%';
+}
+
 /* ── CONFIG ── */
 const INTERVAL = 10;
 const CIRC = 2 * Math.PI * 14; // svg circle circumference

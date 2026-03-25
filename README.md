@@ -1,5 +1,12 @@
 # 🌍 pingmap
 
+[![Python](https://img.shields.io/badge/Python-3.6+-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-zero-f59e0b?style=flat-square)](#requirements)
+[![Deploy](https://img.shields.io/badge/Deploy-AWS%20Lightsail-ff9900?style=flat-square&logo=amazon-aws&logoColor=white)](#-deploy-on-aws-lightsail-always-on-public-url)
+[![Servers](https://img.shields.io/badge/Servers-41%20worldwide-6366f1?style=flat-square)](#-server-coverage)
+[![Measurements](https://img.shields.io/badge/Method-TCP%20SYN%2FACK-0ea5e9?style=flat-square)](#why-tcp-instead-of-icmp-ping)
+
 **Visualize your network latency to servers around the world — live, in your browser.**
 
 pingmap measures how long your data packets take to travel from your machine to 40+ servers across every continent. It runs a local web server and displays an interactive world map with real-time results.
@@ -23,7 +30,7 @@ pingmap measures how long your data packets take to travel from your machine to 
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/yourusername/pingmap.git
+git clone https://github.com/tjk-solutions-de/pingmap.git
 cd pingmap
 python3 ping_map.py
 ```
@@ -135,6 +142,87 @@ pingmap uses **Unicast regional endpoints** instead:
 - US West Coast: 130–160ms
 - Tokyo: 220–260ms
 - Sydney: 280–320ms
+
+---
+
+## ☁️ Deploy on AWS Lightsail (always-on, public URL)
+
+Run pingmap 24/7 so anyone can access it via a public IP.
+
+**Cost:** Free for 90 days, then **$5/month** (includes IPv4 address fee).
+
+### 1. Create instance
+
+Go to [lightsail.aws.amazon.com](https://lightsail.aws.amazon.com) → **Create instance**
+
+| Field | Value |
+|-------|-------|
+| Region | Frankfurt (eu-central-1) |
+| OS | Ubuntu 24.04 LTS |
+| Plan | $3.50/mo |
+| Name | `pingmap` |
+
+### 2. Open port 8765
+
+Lightsail → your instance → **Networking** tab → **Add rule** → TCP `8765` → Save
+
+### 3. Connect & install
+
+Click **"Connect"** in the Lightsail dashboard (opens browser terminal), then:
+
+```bash
+git clone https://github.com/tjk-solutions-de/pingmap.git
+cd pingmap
+```
+
+### 4. Run as a background service
+
+```bash
+sudo nano /etc/systemd/system/pingmap.service
+```
+
+Paste this:
+
+```ini
+[Unit]
+Description=Global Ping Monitor
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/pingmap
+ExecStart=/usr/bin/python3 /home/ubuntu/pingmap/ping_map.py --interval 60 --port 8765
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable pingmap
+sudo systemctl start pingmap
+
+# Check it's running
+sudo systemctl status pingmap
+```
+
+### 5. Open in browser
+
+```
+http://YOUR_LIGHTSAIL_IP:8765
+```
+
+Your public IP is shown in the Lightsail dashboard.
+
+### Update after code changes
+
+```bash
+cd ~/pingmap
+git pull
+sudo systemctl restart pingmap
+```
 
 ---
 
