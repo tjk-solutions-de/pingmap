@@ -170,19 +170,18 @@ HTML = r"""<!DOCTYPE html>
   --text:     #e2e8f0;
   --muted:    rgba(226,232,240,0.45);
   --faint:    rgba(226,232,240,0.2);
-
-  --c0: #22d3ee;   /* accent cyan */
-  --c1: #34d399;   /* green  <20ms */
-  --c2: #a3e635;   /* lime   <60ms */
-  --c3: #fbbf24;   /* amber  <150ms */
-  --c4: #fb923c;   /* orange <300ms */
-  --c5: #f43f5e;   /* red    >300ms / offline */
-
+  --c0: #22d3ee;
+  --c1: #34d399;
+  --c2: #a3e635;
+  --c3: #fbbf24;
+  --c4: #fb923c;
+  --c5: #f43f5e;
   --sidebar: 320px;
   --hdr: 58px;
+  --sheet: 50vh;
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); overflow:hidden; }
 
 /* ══ HEADER ══════════════════════════════════════════════════════════════════ */
@@ -191,7 +190,7 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   background:rgba(8,9,15,0.96);
   border-bottom:1px solid var(--border);
   backdrop-filter:blur(20px);
-  display:flex; align-items:center; padding:0 20px; gap:16px;
+  display:flex; align-items:center; padding:0 16px; gap:12px;
   z-index:1000;
 }
 
@@ -202,18 +201,15 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   width:32px; height:32px; border-radius:8px;
   background:linear-gradient(135deg,#0ea5e9,#6366f1);
   display:flex; align-items:center; justify-content:center;
-  font-size:15px;
-  box-shadow:0 0 16px rgba(99,102,241,0.4);
+  font-size:15px; box-shadow:0 0 16px rgba(99,102,241,0.4);
 }
 .brand-name {
   font-family:'Syne',sans-serif; font-size:1rem; font-weight:700;
-  letter-spacing:-.01em; color:var(--text);
-  white-space:nowrap;
+  letter-spacing:-.01em; color:var(--text); white-space:nowrap;
 }
 .brand-tag {
-  font-size:.62rem; font-weight:500;
-  color:var(--muted); letter-spacing:.06em;
-  text-transform:uppercase; margin-top:1px;
+  font-size:.62rem; font-weight:500; color:var(--muted);
+  letter-spacing:.06em; text-transform:uppercase; margin-top:1px;
 }
 
 .hdr-sep { width:1px; height:24px; background:var(--border2); flex-shrink:0; }
@@ -249,24 +245,30 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   border:none; border-radius:8px; padding:7px 14px;
   color:#fff; font-family:'DM Sans',sans-serif; font-size:.78rem; font-weight:500;
   cursor:pointer; transition:opacity .15s, transform .1s;
-  box-shadow:0 0 16px rgba(99,102,241,0.3);
-  white-space:nowrap;
+  box-shadow:0 0 16px rgba(99,102,241,0.3); white-space:nowrap;
 }
 #btn-measure:hover { opacity:.88; }
 #btn-measure:active { transform:scale(.97); }
 #btn-measure:disabled { opacity:.35; cursor:not-allowed; }
 #btn-measure .btn-icon { font-size:.9rem; }
 
-.cd-ring {
-  position:relative; width:34px; height:34px; flex-shrink:0;
-}
+.cd-ring { position:relative; width:34px; height:34px; flex-shrink:0; }
 .cd-ring svg { transform:rotate(-90deg); }
 .cd-track { fill:none; stroke:var(--border2); stroke-width:2.5; }
-.cd-arc   { fill:none; stroke:var(--c0); stroke-width:2.5; stroke-linecap:round;
-  transition:stroke-dashoffset .9s linear; }
+.cd-arc   { fill:none; stroke:var(--c0); stroke-width:2.5; stroke-linecap:round; transition:stroke-dashoffset .9s linear; }
 .cd-num {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   font-family:'DM Mono',monospace; font-size:.62rem; color:var(--muted);
+}
+
+/* Mobile header — sheet toggle button */
+#btn-sheet {
+  display:none;
+  align-items:center; justify-content:center;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:8px; width:36px; height:36px;
+  color:var(--muted); font-size:1.1rem; cursor:pointer;
+  flex-shrink:0;
 }
 
 /* ══ LAYOUT ══════════════════════════════════════════════════════════════════ */
@@ -275,13 +277,14 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   display:flex;
 }
 
-/* ══ SIDEBAR ═════════════════════════════════════════════════════════════════ */
+/* ══ SIDEBAR — DESKTOP ═══════════════════════════════════════════════════════ */
 #sidebar {
   width:var(--sidebar); flex-shrink:0;
   background:var(--surface);
   border-right:1px solid var(--border);
   display:flex; flex-direction:column;
   overflow:hidden; z-index:10;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
 }
 
 .sb-header {
@@ -293,9 +296,7 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   font-family:'Syne',sans-serif; font-size:.78rem; font-weight:700;
   text-transform:uppercase; letter-spacing:.1em; color:var(--muted);
 }
-.sb-filter {
-  display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;
-}
+.sb-filter { display:flex; gap:4px; margin-top:10px; flex-wrap:wrap; }
 .filter-btn {
   font-size:.6rem; padding:3px 8px; border-radius:5px;
   border:1px solid var(--border); background:transparent;
@@ -309,6 +310,7 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
 .sb-list {
   flex:1; overflow-y:auto; padding:8px 0;
   scrollbar-width:thin; scrollbar-color:var(--border2) transparent;
+  -webkit-overflow-scrolling:touch;
 }
 .sb-list::-webkit-scrollbar { width:4px; }
 .sb-list::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
@@ -319,17 +321,15 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
   color:var(--faint); padding:10px 16px 4px;
   display:flex; align-items:center; justify-content:space-between;
 }
-.cont-avg {
-  font-family:'DM Mono',monospace; font-size:.62rem; font-weight:400;
-}
+.cont-avg { font-family:'DM Mono',monospace; font-size:.62rem; font-weight:400; }
 
 .sb-row {
   display:flex; align-items:center; gap:10px;
-  padding:7px 16px; cursor:pointer;
-  transition:background .12s; border-radius:0;
-  position:relative;
+  padding:9px 16px; cursor:pointer;
+  transition:background .12s; position:relative;
 }
-.sb-row:hover { background:var(--surface2); }
+.sb-row:hover  { background:var(--surface2); }
+.sb-row:active { background:rgba(14,165,233,.08); }
 .sb-row.active { background:rgba(14,165,233,.06); }
 .sb-row.active::before {
   content:''; position:absolute; left:0; top:0; bottom:0;
@@ -342,17 +342,12 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
 .sb-org  { font-size:.6rem; color:var(--muted); margin-top:1px; }
 
 .sb-ping { flex-shrink:0; text-align:right; }
-.sb-ms {
-  font-family:'DM Mono',monospace; font-size:.78rem; font-weight:500;
-  line-height:1;
-}
+.sb-ms { font-family:'DM Mono',monospace; font-size:.78rem; font-weight:500; line-height:1; }
 .sb-bar-wrap { width:40px; height:3px; background:var(--border); border-radius:2px; margin-top:3px; overflow:hidden; }
 .sb-bar { height:100%; border-radius:2px; transition:width .5s ease; }
 
 .sb-footer {
-  padding:12px 16px;
-  border-top:1px solid var(--border);
-  flex-shrink:0;
+  padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0;
 }
 .sb-footer-title {
   font-size:.6rem; text-transform:uppercase; letter-spacing:.1em;
@@ -362,6 +357,90 @@ html, body { height:100%; background:var(--bg); font-family:'DM Sans',sans-serif
 .legend-row { display:flex; align-items:center; gap:8px; font-size:.65rem; color:var(--muted); }
 .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .legend-info { margin-left:auto; font-family:'DM Mono',monospace; font-size:.6rem; color:var(--faint); }
+
+/* ══ MOBILE BOTTOM SHEET ═════════════════════════════════════════════════════ */
+@media (max-width:700px) {
+  :root { --hdr:52px; }
+
+  /* Header — compact */
+  .brand-tag, .hdr-sep, .origin-chip, .hdr-stats, .cd-ring { display:none !important; }
+  .brand-name { font-size:.88rem; }
+  #btn-measure { padding:6px 10px; font-size:.72rem; }
+  #btn-sheet { display:flex; }
+  .hdr-right { gap:8px; }
+
+  /* Layout stacks vertically */
+  #layout { flex-direction:column; }
+
+  /* Map fills screen */
+  #map-wrap { flex:1; }
+
+  /* Sidebar becomes bottom sheet */
+  #sidebar {
+    position:fixed;
+    left:0; right:0; bottom:0;
+    width:100%;
+    height:var(--sheet);
+    border-right:none;
+    border-top:1px solid var(--border2);
+    border-radius:16px 16px 0 0;
+    transform:translateY(100%);
+    z-index:500;
+    box-shadow:0 -8px 32px rgba(0,0,0,.5);
+  }
+  #sidebar.sheet-open { transform:translateY(0); }
+
+  /* Sheet drag handle */
+  .sb-header::before {
+    content:''; display:block;
+    width:36px; height:4px;
+    background:var(--border2); border-radius:2px;
+    margin:0 auto 10px;
+  }
+
+  /* Bigger touch targets in list */
+  .sb-row { padding:11px 16px; }
+  .filter-btn { padding:5px 10px; font-size:.65rem; }
+
+  /* Map controls smaller + repositioned */
+  #map-controls {
+    bottom:10px; right:10px;
+    padding:8px 10px; min-width:140px;
+  }
+
+  /* Toast above sheet */
+  #toast { bottom:calc(var(--sheet) + 12px); }
+
+  /* Hide sidebar footer legend on mobile (saves space) */
+  .sb-footer { display:none; }
+
+  /* Mobile stats bar — shown below header as a strip */
+  #mobile-stats {
+    display:flex !important;
+    position:fixed; top:var(--hdr); left:0; right:0;
+    height:36px; z-index:999;
+    background:rgba(8,9,15,.95);
+    border-bottom:1px solid var(--border);
+    align-items:center; justify-content:space-around;
+    padding:0 12px; gap:8px;
+  }
+  .mstat {
+    display:flex; align-items:center; gap:5px;
+    font-family:'DM Mono',monospace; font-size:.68rem;
+  }
+  .mstat-l { color:var(--faint); font-size:.55rem; }
+  .mstat-v { color:var(--c0); }
+
+  /* Push map below mobile stats bar */
+  #layout { top:calc(var(--hdr) + 36px); }
+
+  /* Tooltip smaller on mobile */
+  #tt { min-width:180px; padding:10px 12px; font-size:.65rem; }
+  .tt-bigping { font-size:1.4rem; }
+}
+
+/* Hide mobile stats on desktop */
+#mobile-stats { display:none; }
 
 /* ══ MAP ═════════════════════════════════════════════════════════════════════ */
 #map-wrap { flex:1; position:relative; overflow:hidden; }
@@ -639,6 +718,7 @@ input[type=range].mc-slider::-moz-range-thumb {
     <button id="btn-measure" onclick="triggerMeasure()">
       <span class="btn-icon">⚡</span> Jetzt messen
     </button>
+    <button id="btn-sheet" onclick="toggleSheet()" title="Server-Liste">☰</button>
     <div class="cd-ring">
       <svg width="34" height="34" viewBox="0 0 34 34">
         <circle class="cd-track" cx="17" cy="17" r="14"/>
@@ -649,6 +729,18 @@ input[type=range].mc-slider::-moz-range-thumb {
     </div>
   </div>
 </div>
+
+<!-- Mobile stats strip (only shown on mobile) -->
+<div id="mobile-stats">
+  <div class="mstat"><span class="mstat-l">Online</span>&nbsp;<span class="mstat-v" id="ms-onl">—</span></div>
+  <div class="mstat"><span class="mstat-l">Schnellstes</span>&nbsp;<span class="mstat-v" id="ms-best" style="color:var(--c1)">—</span></div>
+  <div class="mstat"><span class="mstat-l">Ø</span>&nbsp;<span class="mstat-v" id="ms-avg">—</span></div>
+  <div class="mstat"><span class="mstat-l">Weitestes</span>&nbsp;<span class="mstat-v" id="ms-worst" style="color:var(--c4)">—</span></div>
+</div>
+
+<!-- Sheet backdrop -->
+<div id="sheet-backdrop" onclick="toggleSheet()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:499;backdrop-filter:blur(2px);"></div>
 
 <!-- ═══ LAYOUT ═══ -->
 <div id="layout">
@@ -757,6 +849,14 @@ input[type=range].mc-slider::-moz-range-thumb {
 <div id="toast"></div>
 
 <script>
+/* ── MOBILE SHEET ── */
+function toggleSheet() {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sheet-backdrop');
+  const open = sb.classList.toggle('sheet-open');
+  bd.style.display = open ? 'block' : 'none';
+}
+
 /* ── MAP FILTER ── */
 let mapBright = 75, mapSat = 50;
 function updateMapFilter(bright, sat) {
@@ -875,10 +975,14 @@ function renderMarkers(targets, results) {
       markers[t.id].off('mouseover').on('mouseover', e => showTT(e.originalEvent, t, res));
     } else {
       const m = L.marker([t.lat, t.lon], {icon, zIndexOffset:100}).addTo(map);
-      m.on('mouseover', e => showTT(e.originalEvent, t, res));
-      m.on('mousemove',  e => moveTT(e.originalEvent));
-      m.on('mouseout',  () => hideTT());
-      m.on('click', () => focusRow(t.id));
+      const isMobile = () => window.innerWidth <= 700;
+      m.on('mouseover', e => { if(!isMobile()) showTT(e.originalEvent, t, res); });
+      m.on('mousemove',  e => { if(!isMobile()) moveTT(e.originalEvent); });
+      m.on('mouseout',  () => { if(!isMobile()) hideTT(); });
+      m.on('click', e => {
+        focusRow(t.id);
+        if(isMobile()) { showTT(e.originalEvent, t, res); setTimeout(hideTT, 3000); }
+      });
       markers[t.id] = m;
     }
   });
@@ -988,8 +1092,12 @@ function buildSidebar(data) {
 function rowClick(id, lat, lon) {
   activeId = id;
   map.flyTo([lat, lon], 6, { animate: true, duration: 1 });
-  // Rebuild sidebar to show active state
   if (lastData) buildSidebar(lastData);
+  // Close sheet on mobile after tap
+  if (window.innerWidth <= 700) {
+    document.getElementById('sidebar').classList.remove('sheet-open');
+    document.getElementById('sheet-backdrop').style.display = 'none';
+  }
 }
 function focusRow(id) {
   activeId = id;
@@ -1019,6 +1127,9 @@ function updateStats(data) {
   document.getElementById('s-avg').textContent   = avg + 'ms';
   document.getElementById('s-best').textContent  = Math.min(...pings) + 'ms';
   document.getElementById('s-worst').textContent = Math.max(...pings) + 'ms';
+  // Mobile stats strip
+  const mob = id => { const el=document.getElementById(id); if(el) el.textContent=document.getElementById(id.replace('ms-','s-')).textContent; };
+  ['ms-onl','ms-best','ms-avg','ms-worst'].forEach(mob);
 }
 
 /* ── TOOLTIP ── */
