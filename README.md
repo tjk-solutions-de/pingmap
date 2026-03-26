@@ -17,7 +17,7 @@
 
 pingmap measures how long your data packets take to travel from your machine to 40+ servers across every continent. It runs a local web server and displays an interactive world map with real-time results.
 
-![pingmap screenshot](PingMapDashboard.png)
+![PingMap Dashboard](img/PingMapDashboard.png)
 
 ---
 
