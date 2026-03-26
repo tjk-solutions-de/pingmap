@@ -241,6 +241,48 @@ sudo systemctl restart pingmap
 
 ---
 
+## 🔧 Known Network Issues
+ 
+### TH Wildau (eduroam) — Site not reachable
+ 
+The eduroam network at TH Wildau uses a custom DNS server (`193.175.213.170`) that does not resolve external domains like `pingmap.tjks.org`. The site itself is fully reachable — only DNS resolution fails.
+ 
+**Fix on macOS:**
+ 
+```bash
+# Set DNS to Google (fixes it immediately)
+sudo networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4
+ 
+# Revert when done
+sudo networksetup -setdnsservers Wi-Fi "Empty"
+```
+ 
+Or permanently via **System Settings → Wi-Fi → eduroam → Details → DNS** → add `8.8.8.8` and `8.8.4.4` at the top.
+ 
+**Fix on Windows:**
+ 
+1. **Start → Settings → Network & Internet → Wi-Fi → eduroam → Edit DNS**
+2. Set IPv4 DNS to:
+   - Preferred: `8.8.8.8`
+   - Alternate: `8.8.4.4`
+3. Save → reload the page
+ 
+Or via PowerShell (Admin):
+```powershell
+# Find your Wi-Fi adapter name
+Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
+ 
+# Set DNS (replace "Wi-Fi" with your adapter name if different)
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses "8.8.8.8","8.8.4.4"
+ 
+# Revert
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ResetServerAddresses
+```
+ 
+> This issue is specific to TH Wildau's eduroam DNS configuration and not related to pingmap. Mobile data and home networks work without any changes.
+
+---
+
 ## 📄 License
 
 MIT License — do whatever you want with it.
