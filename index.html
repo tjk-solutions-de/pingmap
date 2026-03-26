@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pingmap — Lichtgeschwindigkeit im Netz sichtbar machen</title>
+<meta name="description" content="Ein Uni-Projekt der TH Wildau. Visualisiert Netzwerklatenz weltweit — wie schnell reist ein Datenpaket um die Erde?">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #06080f;
+  --surface: #0c0f1a;
+  --border:  rgba(100,160,255,0.1);
+  --accent:  #4f9eff;
+  --accent2: #00e8c8;
+  --text:    #dde6f5;
+  --muted:   rgba(221,230,245,0.45);
+  --faint:   rgba(221,230,245,0.18);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior:smooth; }
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans', sans-serif;
+  font-weight:300;
+  overflow-x:hidden;
+  line-height:1.7;
+}
+
+/* ── CANVAS BACKGROUND ── */
+#bg-canvas {
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none; opacity:.55;
+}
+
+/* ── NAV ── */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  padding:20px 48px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(to bottom, rgba(6,8,15,.95), transparent);
+}
+.nav-logo {
+  font-family:'DM Mono',monospace; font-size:.85rem;
+  color:var(--accent); letter-spacing:.15em;
+  display:flex; align-items:center; gap:10px;
+  text-decoration:none;
+}
+.nav-logo-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--accent2); box-shadow:0 0 10px var(--accent2);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.6)} }
+
+.nav-links { display:flex; gap:32px; }
+.nav-links a {
+  font-size:.82rem; color:var(--muted); text-decoration:none;
+  letter-spacing:.04em; transition:color .2s;
+}
+.nav-links a:hover { color:var(--text); }
+
+.nav-cta {
+  font-family:'DM Mono',monospace; font-size:.75rem;
+  background:transparent; border:1px solid rgba(79,158,255,.4);
+  color:var(--accent); border-radius:6px; padding:8px 18px;
+  text-decoration:none; transition:all .2s;
+}
+.nav-cta:hover { background:rgba(79,158,255,.1); border-color:var(--accent); }
+
+/* ── SECTIONS ── */
+section { position:relative; z-index:1; }
+
+/* ── HERO ── */
+#hero {
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  text-align:center; padding:120px 24px 80px;
+}
+
+.hero-eyebrow {
+  font-family:'DM Mono',monospace; font-size:.72rem;
+  color:var(--accent2); letter-spacing:.2em; text-transform:uppercase;
+  margin-bottom:24px;
+  opacity:0; animation:fadeUp .8s .2s forwards;
+}
+
+.hero-title {
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(2.8rem, 8vw, 6.5rem);
+  line-height:1.05; letter-spacing:-.02em;
+  color:var(--text); max-width:900px;
+  opacity:0; animation:fadeUp .8s .4s forwards;
+}
+.hero-title em {
+  font-style:italic; color:var(--accent);
+}
+
+.hero-sub {
+  font-size:clamp(.95rem, 2vw, 1.15rem);
+  color:var(--muted); max-width:560px; margin-top:24px;
+  opacity:0; animation:fadeUp .8s .6s forwards;
+}
+
+.hero-ctas {
+  display:flex; gap:14px; margin-top:40px; flex-wrap:wrap; justify-content:center;
+  opacity:0; animation:fadeUp .8s .8s forwards;
+}
+.btn-primary {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--accent); color:#06080f;
+  font-family:'DM Sans',sans-serif; font-weight:500; font-size:.88rem;
+  border-radius:8px; padding:13px 26px; text-decoration:none;
+  transition:opacity .15s, transform .1s;
+  box-shadow:0 0 30px rgba(79,158,255,.3);
+}
+.btn-primary:hover { opacity:.88; transform:translateY(-1px); }
+.btn-secondary {
+  display:inline-flex; align-items:center; gap:8px;
+  border:1px solid var(--border); color:var(--muted);
+  font-family:'DM Sans',sans-serif; font-size:.88rem;
+  border-radius:8px; padding:13px 26px; text-decoration:none;
+  transition:all .15s;
+}
+.btn-secondary:hover { border-color:rgba(100,160,255,.3); color:var(--text); }
+
+/* Speed of light stat */
+.hero-stat {
+  margin-top:64px;
+  display:flex; align-items:center; gap:40px; flex-wrap:wrap; justify-content:center;
+  opacity:0; animation:fadeUp .8s 1s forwards;
+}
+.hstat {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.hstat-num {
+  font-family:'DM Mono',monospace; font-size:1.8rem; font-weight:500;
+  color:var(--accent); line-height:1;
+}
+.hstat-label { font-size:.65rem; color:var(--faint); letter-spacing:.1em; text-transform:uppercase; }
+.hstat-sep { width:1px; height:40px; background:var(--border); }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── CONCEPT SECTION ── */
+#concept {
+  padding:120px 24px;
+  max-width:1100px; margin:0 auto;
+}
+
+.section-label {
+  font-family:'DM Mono',monospace; font-size:.68rem;
+  color:var(--accent2); letter-spacing:.2em; text-transform:uppercase;
+  margin-bottom:16px;
+}
+.section-title {
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(2rem, 5vw, 3.5rem);
+  line-height:1.1; letter-spacing:-.01em;
+  max-width:700px; margin-bottom:24px;
+}
+
+.concept-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:80px; align-items:start; margin-top:64px;
+}
+.concept-text p {
+  color:var(--muted); font-size:1rem; margin-bottom:16px;
+}
+.concept-text p strong { color:var(--text); font-weight:500; }
+
+.concept-cards { display:flex; flex-direction:column; gap:16px; }
+.concept-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:20px 24px;
+  display:flex; gap:16px; align-items:flex-start;
+  transition:border-color .2s;
+}
+.concept-card:hover { border-color:rgba(79,158,255,.25); }
+.card-icon {
+  font-size:1.4rem; flex-shrink:0;
+  width:40px; height:40px;
+  background:rgba(79,158,255,.08); border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+}
+.card-title { font-size:.88rem; font-weight:500; color:var(--text); margin-bottom:4px; }
+.card-text  { font-size:.78rem; color:var(--muted); line-height:1.6; }
+
+/* ── PHYSICS SECTION ── */
+#physics {
+  padding:120px 24px;
+  background:linear-gradient(to bottom, transparent, rgba(10,14,28,.6), transparent);
+}
+.physics-inner { max-width:1100px; margin:0 auto; }
+
+.physics-formula {
+  text-align:center; margin:56px 0;
+  font-family:'DM Mono',monospace;
+}
+.formula-big {
+  font-size:clamp(2rem,6vw,4rem); color:var(--accent);
+  letter-spacing:.05em; line-height:1;
+}
+.formula-label {
+  font-size:.7rem; color:var(--faint); letter-spacing:.15em;
+  text-transform:uppercase; margin-top:12px;
+}
+
+.physics-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:24px;
+  margin-top:56px;
+}
+.phys-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:28px 24px; text-align:center;
+}
+.phys-num {
+  font-family:'DM Mono',monospace; font-size:1.6rem; font-weight:500;
+  color:var(--accent2); margin-bottom:8px;
+}
+.phys-city { font-size:.88rem; color:var(--text); margin-bottom:4px; }
+.phys-note { font-size:.72rem; color:var(--faint); }
+.phys-bar {
+  height:3px; border-radius:2px; margin-top:16px;
+  background:linear-gradient(to right, var(--accent2), var(--accent));
+  opacity:.4;
+}
+
+/* ── HOW IT WORKS ── */
+#how {
+  padding:120px 24px;
+  max-width:1100px; margin:0 auto;
+}
+
+.steps {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:2px; margin-top:56px; position:relative;
+}
+.steps::before {
+  content:''; position:absolute;
+  top:28px; left:12.5%; right:12.5%; height:1px;
+  background:linear-gradient(to right, transparent, var(--accent), var(--accent), transparent);
+  opacity:.2;
+}
+.step { padding:0 16px; }
+.step-num {
+  width:56px; height:56px; border-radius:50%;
+  border:1px solid var(--border);
+  background:var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'DM Mono',monospace; font-size:.8rem; color:var(--accent);
+  margin-bottom:20px; position:relative; z-index:1;
+}
+.step-title { font-size:.9rem; font-weight:500; color:var(--text); margin-bottom:8px; }
+.step-text  { font-size:.78rem; color:var(--muted); line-height:1.6; }
+
+/* ── TEAM / PROJECT ── */
+#about {
+  padding:120px 24px;
+  background:linear-gradient(to bottom, transparent, rgba(10,14,28,.8));
+}
+.about-inner {
+  max-width:800px; margin:0 auto; text-align:center;
+}
+.th-badge {
+  display:inline-flex; align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:100px; padding:8px 20px;
+  font-size:.78rem; color:var(--muted); margin-bottom:32px;
+}
+.th-badge strong { color:var(--text); }
+
+.about-text {
+  font-size:1.05rem; color:var(--muted); margin-bottom:16px;
+}
+.about-text strong { color:var(--text); font-weight:500; }
+
+.module-chip {
+  display:inline-block; margin-top:24px;
+  background:rgba(79,158,255,.08); border:1px solid rgba(79,158,255,.2);
+  border-radius:6px; padding:6px 14px;
+  font-family:'DM Mono',monospace; font-size:.72rem; color:var(--accent);
+  letter-spacing:.06em;
+}
+
+/* ── IMPRESSUM ── */
+#impressum {
+  padding:80px 24px 40px;
+  border-top:1px solid var(--border);
+}
+.impressum-inner {
+  max-width:1100px; margin:0 auto;
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:48px;
+}
+.imp-block-title {
+  font-family:'DM Mono',monospace; font-size:.65rem;
+  color:var(--accent2); letter-spacing:.15em; text-transform:uppercase;
+  margin-bottom:14px;
+}
+.imp-block p {
+  font-size:.8rem; color:var(--muted); line-height:1.8;
+}
+.imp-block a {
+  color:var(--accent); text-decoration:none;
+}
+.imp-block a:hover { text-decoration:underline; }
+
+/* ── FOOTER ── */
+footer {
+  padding:24px 48px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-top:1px solid var(--border);
+}
+.footer-left {
+  font-family:'DM Mono',monospace; font-size:.7rem; color:var(--faint);
+}
+.footer-right {
+  display:flex; gap:24px;
+}
+.footer-right a {
+  font-size:.75rem; color:var(--faint); text-decoration:none; transition:color .2s;
+}
+.footer-right a:hover { color:var(--muted); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:768px) {
+  nav { padding:16px 20px; }
+  .nav-links { display:none; }
+
+  .concept-grid { grid-template-columns:1fr; gap:40px; }
+  .physics-grid { grid-template-columns:1fr; gap:16px; }
+  .steps { grid-template-columns:1fr 1fr; gap:32px; }
+  .steps::before { display:none; }
+  .impressum-inner { grid-template-columns:1fr; gap:32px; }
+  footer { flex-direction:column; gap:16px; text-align:center; }
+  .footer-right { flex-wrap:wrap; justify-content:center; }
+}
+
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity:0; transform:translateY(24px);
+  transition:opacity .7s ease, transform .7s ease;
+}
+.reveal.visible { opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    pingmap
+  </a>
+  <div class="nav-links">
+    <a href="#concept">Konzept</a>
+    <a href="#physics">Physik</a>
+    <a href="#how">Methode</a>
+    <a href="#about">Projekt</a>
+    <a href="#impressum">Impressum</a>
+  </div>
+  <a href="https://pingmap.tjks.org" class="nav-cta" target="_blank">→ Live öffnen</a>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div class="hero-eyebrow">TH Wildau · Telematik T24 · Telekommunikationsnetze</div>
+  <h1 class="hero-title">
+    Wie schnell reist ein<br>
+    <em>Datenpaket</em> um die Erde?
+  </h1>
+  <p class="hero-sub">
+    pingmap macht Netzwerklatenz sichtbar — in Echtzeit, weltweit,
+    direkt aus deinem Browser. Ein Uni-Projekt, das Physik und Informatik zusammenbringt.
+  </p>
+  <div class="hero-ctas">
+    <a href="https://pingmap.tjks.org" class="btn-primary" target="_blank">
+      🌍 Live-Demo öffnen
+    </a>
+    <a href="https://github.com/tjk-solutions-de/pingmap" class="btn-secondary" target="_blank">
+      ↗ GitHub
+    </a>
+  </div>
+  <div class="hero-stat">
+    <div class="hstat">
+      <div class="hstat-num">299,792</div>
+      <div class="hstat-label">km/s Lichtgeschwindigkeit</div>
+    </div>
+    <div class="hstat-sep"></div>
+    <div class="hstat">
+      <div class="hstat-num">~67ms</div>
+      <div class="hstat-label">theoret. RTT Berlin→NYC</div>
+    </div>
+    <div class="hstat-sep"></div>
+    <div class="hstat">
+      <div class="hstat-num">41+</div>
+      <div class="hstat-label">Messpunkte weltweit</div>
+    </div>
+    <div class="hstat-sep"></div>
+    <div class="hstat">
+      <div class="hstat-num">TCP</div>
+      <div class="hstat-label">SYN/ACK Messmethode</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONCEPT ═══ -->
+<section id="concept">
+  <div class="reveal">
+    <div class="section-label">Das Konzept</div>
+    <h2 class="section-title">Netzwerklatenz als physikalisches Phänomen</h2>
+  </div>
+  <div class="concept-grid">
+    <div class="concept-text reveal">
+      <p>
+        Jede Nachricht die du sendest — eine WhatsApp, ein Google-Aufruf, ein Stream — 
+        reist als Lichtimpuls durch Glasfaserkabel. Mit annähernd <strong>Lichtgeschwindigkeit</strong>, 
+        aber nie ganz so schnell.
+      </p>
+      <p>
+        Glasfaser überträgt Signale mit etwa <strong>zwei Dritteln der Lichtgeschwindigkeit</strong> 
+        (~200.000 km/s), da Licht im Glas langsamer ist als im Vakuum. 
+        Der Rest der Latenz entsteht durch Router, Switches und die reine <strong>geografische Distanz</strong>.
+      </p>
+      <p>
+        pingmap macht genau das messbar: Wie lange braucht ein Paket von <strong>deinem Rechner</strong> 
+        zu einem Server in Tokyo, São Paulo oder Kapstadt? 
+        Und wie nah ist das an der physikalischen Grenze?
+      </p>
+    </div>
+    <div class="concept-cards reveal">
+      <div class="concept-card">
+        <div class="card-icon">⚡</div>
+        <div>
+          <div class="card-title">Lichtgeschwindigkeit im Glas</div>
+          <div class="card-text">Licht reist in Glasfaser mit ~200.000 km/s — etwa 66% der Vakuum-Lichtgeschwindigkeit. Das setzt die absolute Untergrenze für Netzwerklatenz.</div>
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="card-icon">🌐</div>
+        <div>
+          <div class="card-title">Kein Anycast-Trick</div>
+          <div class="card-text">Wir messen zu geographisch fixen Unicast-IPs (AWS S3 Regional, Vultr, Hetzner) — keine Anycast-Adressen die zum nächsten lokalen Node routen würden.</div>
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="card-icon">🔬</div>
+        <div>
+          <div class="card-title">TCP SYN/ACK = echter RTT</div>
+          <div class="card-text">Statt ICMP Ping nutzen wir TCP SYN→ACK Timing. Das ist identisch in der Präzision, benötigt keine Root-Rechte und funktioniert durch Firewalls.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PHYSICS ═══ -->
+<section id="physics">
+  <div class="physics-inner">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">Die Physik dahinter</div>
+      <h2 class="section-title" style="margin:0 auto;text-align:center">Von der Theorie zur Messung</h2>
+    </div>
+
+    <div class="physics-formula reveal">
+      <div class="formula-big">t = d / v</div>
+      <div class="formula-label">Laufzeit = Distanz ÷ Ausbreitungsgeschwindigkeit</div>
+    </div>
+
+    <div class="physics-grid reveal">
+      <div class="phys-card">
+        <div class="phys-num">~9ms</div>
+        <div class="phys-city">Berlin → Frankfurt</div>
+        <div class="phys-note">524 km · theoret. Min: ~3ms</div>
+        <div class="phys-bar" style="width:20%"></div>
+      </div>
+      <div class="phys-card">
+        <div class="phys-num">~85ms</div>
+        <div class="phys-city">Berlin → New York</div>
+        <div class="phys-note">6.400 km · theoret. Min: ~40ms</div>
+        <div class="phys-bar" style="width:55%"></div>
+      </div>
+      <div class="phys-card">
+        <div class="phys-num">~240ms</div>
+        <div class="phys-city">Berlin → Tokyo</div>
+        <div class="phys-note">8.900 km · theoret. Min: ~55ms</div>
+        <div class="phys-bar" style="width:90%"></div>
+      </div>
+    </div>
+
+    <p class="reveal" style="text-align:center;color:var(--faint);font-size:.8rem;margin-top:24px">
+      Reale Latenzen liegen deutlich über dem theoretischen Minimum — durch Routing-Umwege, 
+      Protokoll-Overhead und Zwischenstationen.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="how">
+  <div class="reveal">
+    <div class="section-label">Wie es funktioniert</div>
+    <h2 class="section-title">Vom Klick zur Weltkarte</h2>
+  </div>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Standort ermitteln</div>
+      <div class="step-text">Python erkennt deine öffentliche IP und geortet sie via ip-api.com. Du erscheinst als leuchtender Ursprungspunkt auf der Karte.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Parallel messen</div>
+      <div class="step-text">41 TCP-Verbindungen werden gleichzeitig geöffnet. Jede misst die Zeit bis zum SYN-ACK — dem ersten Handshake des Servers.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Median berechnen</div>
+      <div class="step-text">3 Messungen pro Ziel, Median wird genutzt. Das eliminiert Ausreißer und gibt einen stabilen, repräsentativen RTT-Wert.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">Live visualisieren</div>
+      <div class="step-text">Der Browser pollt alle 600ms den lokalen Server. Ergebnisse erscheinen live auf der Leaflet-Karte mit animierten Verbindungslinien.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="about-inner reveal">
+    <div class="th-badge">
+      🎓 <strong>TH Wildau</strong> &nbsp;·&nbsp; Technische Hochschule Wildau
+    </div>
+    <div class="section-label">Das Projekt</div>
+    <h2 class="section-title" style="margin:0 auto;text-align:center">
+      Ein Studienprojekt — entstanden aus Neugier
+    </h2>
+    <p class="about-text" style="margin-top:32px">
+      pingmap entstand im Rahmen des Moduls <strong>Telekommunikationsnetze</strong> 
+      im Studiengang <strong>Telematik (T24)</strong> an der TH Wildau.
+    </p>
+    <p class="about-text">
+      Die zentrale Frage: <em>Wie nah sind reale Netzwerklatenzen an der physikalischen Grenze 
+      durch die Lichtgeschwindigkeit?</em> Statt das nur in der Theorie zu betrachten, 
+      haben wir ein Tool gebaut das es <strong>für jeden sichtbar macht</strong> — 
+      live, aus dem eigenen Netz, weltweit.
+    </p>
+    <p class="about-text">
+      Das gesamte Projekt ist <strong>Open Source</strong> — komplett in Python und JavaScript, 
+      ohne externe Abhängigkeiten, deploybar auf einem $5/Monat Server.
+    </p>
+    <div class="module-chip">Telekommunikationsnetze · T24 Telematik · TH Wildau · 2025</div>
+  </div>
+</section>
+
+<!-- ═══ IMPRESSUM ═══ -->
+<section id="impressum">
+  <div class="impressum-inner reveal">
+    <div class="imp-block">
+      <div class="imp-block-title">Angaben gemäß § 5 TMG</div>
+      <p>
+        Technische Hochschule Wildau<br>
+        Hochschulring 1<br>
+        15745 Wildau<br>
+        Deutschland
+      </p>
+    </div>
+    <div class="imp-block">
+      <div class="imp-block-title">Ansprechpartner</div>
+      <p>
+        Tom Kruger<br>
+        Studiengang Telematik T24<br>
+        TH Wildau<br><br>
+        <a href="mailto:tom@tjks.de">tom@tjks.de</a>
+      </p>
+    </div>
+    <div class="imp-block">
+      <div class="imp-block-title">Hinweise</div>
+      <p>
+        Dieses Projekt ist ein <strong style="color:var(--text)">nicht-kommerzielles Studienprojekt</strong> 
+        der TH Wildau. Alle Messungen erfolgen ausschließlich zu öffentlich erreichbaren Endpunkten.<br><br>
+        Quellcode: <a href="https://github.com/tjk-solutions-de/pingmap" target="_blank">GitHub →</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-left">© 2025 Tom Kruger · TH Wildau · MIT License</div>
+  <div class="footer-right">
+    <a href="https://pingmap.tjks.org" target="_blank">Live-Demo</a>
+    <a href="https://github.com/tjk-solutions-de/pingmap" target="_blank">GitHub</a>
+    <a href="mailto:tom@tjks.de">Kontakt</a>
+    <a href="#impressum">Impressum</a>
+  </div>
+</footer>
+
+<script>
+/* ── BACKGROUND CANVAS — animated signal pulses ── */
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Nodes (fixed points like servers on a map)
+const nodes = Array.from({length:18}, () => ({
+  x: Math.random() * window.innerWidth,
+  y: Math.random() * window.innerHeight,
+}));
+
+// Packets traveling between nodes
+const packets = Array.from({length:14}, () => createPacket());
+
+function createPacket() {
+  const from = nodes[Math.floor(Math.random() * nodes.length)];
+  const to   = nodes[Math.floor(Math.random() * nodes.length)];
+  return { from, to, progress:Math.random(), speed: .002 + Math.random()*.003 };
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw connections between nearby nodes
+  nodes.forEach((a, i) => {
+    nodes.forEach((b, j) => {
+      if (j <= i) return;
+      const d = Math.hypot(a.x-b.x, a.y-b.y);
+      if (d > 350) return;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = `rgba(79,158,255,${.04 * (1 - d/350)})`;
+      ctx.lineWidth = .8;
+      ctx.stroke();
+    });
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(79,158,255,0.25)';
+    ctx.fill();
+  });
+
+  // Draw packets
+  packets.forEach(p => {
+    p.progress += p.speed;
+    if (p.progress >= 1) Object.assign(p, createPacket(), {progress:0});
+
+    const x = p.from.x + (p.to.x - p.from.x) * p.progress;
+    const y = p.from.y + (p.to.y - p.from.y) * p.progress;
+
+    // Glow
+    const grd = ctx.createRadialGradient(x,y,0, x,y,8);
+    grd.addColorStop(0, 'rgba(0,232,200,.6)');
+    grd.addColorStop(1, 'rgba(0,232,200,0)');
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI*2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Core dot
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,232,200,.9)';
+    ctx.fill();
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ── SCROLL REVEAL ── */
+const reveals = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold:.12 });
+reveals.forEach(el => io.observe(el));
+</script>
+</body>
+</html>
